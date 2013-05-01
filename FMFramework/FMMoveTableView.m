@@ -293,7 +293,7 @@
 
 			
 			// Get the touched cell and reset it's selection state
-			FMMoveTableViewCell *touchedCell = (FMMoveTableViewCell *)[self cellForRowAtIndexPath:touchedIndexPath];
+			UITableViewCell *touchedCell = [self cellForRowAtIndexPath:touchedIndexPath];
 			[touchedCell setSelected:NO];
 			[touchedCell setHighlighted:NO];
 			
@@ -324,9 +324,14 @@
 			[self setSnapShotImageView:snapShotOfMovingCell];
 			[self addSubview:[self snapShotImageView]];
 			
-			
 			// Prepare the cell for moving (e.g. clear it's labels and imageView)
-			[touchedCell prepareForMove];
+            if ([touchedCell respondsToSelector:@selector(prepareForMove)]) {
+                [(id)touchedCell prepareForMove];
+            } else {
+                [[touchedCell textLabel] setText:@""];
+                [[touchedCell detailTextLabel] setText:@""];
+                [[touchedCell imageView] setImage:nil];
+            }
 			
 			// Inform the delegate about the beginning of the move
 			if ([[self delegate] respondsToSelector:@selector(moveTableView:willMoveRowAtIndexPath:)]) {

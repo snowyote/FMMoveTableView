@@ -7,7 +7,8 @@
 //  
 
 
-@interface FMMoveTableViewCell : UITableViewCell
+@protocol FMMoveTableViewCell
+@optional
 
 - (void)prepareForMove;
 
