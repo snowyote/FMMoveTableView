@@ -46,6 +46,7 @@
 @property (nonatomic, weak) id <FMMoveTableViewDataSource> dataSource;
 @property (nonatomic, weak) id <FMMoveTableViewDelegate> delegate;
 @property (nonatomic, strong) NSIndexPath *movingIndexPath;
+@property (nonatomic) CGFloat paddingHeight;
 @property (nonatomic, strong) NSIndexPath *initialIndexPathForMovingRow;
 
 - (BOOL)indexPathIsMovingIndexPath:(NSIndexPath *)indexPath;

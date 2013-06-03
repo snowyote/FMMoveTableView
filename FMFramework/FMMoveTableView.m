@@ -70,6 +70,7 @@
 
 @property (nonatomic, assign) CGPoint touchOffset;
 @property (nonatomic, strong) FMSnapShotImageView *snapShotImageView;
+@property (nonatomic, strong) UITableViewCell *touchedCell;
 @property (nonatomic, strong) UILongPressGestureRecognizer *movingGestureRecognizer;
 
 @property (nonatomic, strong) NSTimer *autoscrollTimer;
@@ -102,7 +103,6 @@
 @dynamic dataSource;
 @dynamic delegate;
 @synthesize initialIndexPathForMovingRow = _initialIndexPathForMovingRow;
-@synthesize movingIndexPath = _movingIndexPath;
 @synthesize touchOffset = _touchOffset;
 @synthesize snapShotImageView = _snapShotImageView;
 @synthesize movingGestureRecognizer = _movingGestureRecognizer;
@@ -173,17 +173,49 @@
 				return;
 			}
 		}
-		
-		[self beginUpdates];
-		
-		// Move the row
-		[self deleteRowsAtIndexPaths:[NSArray arrayWithObject:[self movingIndexPath]] withRowAnimation:UITableViewRowAnimationAutomatic];
-        [self insertRowsAtIndexPaths:[NSArray arrayWithObject:newIndexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
-		
-		// Update the moving index path
-		[self setMovingIndexPath:newIndexPath];
-		[self endUpdates];
-	}
+        
+        // Update the moving index path
+        [UIView animateWithDuration:0.2 animations:^{
+            [self setMovingIndexPath:newIndexPath];
+        }];
+    }
+}
+
+- (void)setMovingIndexPath:(NSIndexPath *)newIndexPath
+{
+    if (newIndexPath == nil) {
+        _movingIndexPath = nil;
+        for (NSIndexPath* indexPath in [self indexPathsForVisibleRows]) {
+            UITableViewCell* cell = [self cellForRowAtIndexPath:indexPath];
+            cell.transform = CGAffineTransformIdentity;
+        }
+        return;
+    }
+    
+    // I get a crash in the simulator if I don't do this.  super-odd?
+    _movingIndexPath = [newIndexPath copy];
+    int initialRow = [_initialIndexPathForMovingRow indexAtPosition:1];
+    int movingRow = [_movingIndexPath indexAtPosition:1];
+    
+    for (NSIndexPath* indexPath in [self indexPathsForVisibleRows]) {
+        UITableViewCell* cell = [self cellForRowAtIndexPath:indexPath];
+        int currentRow = [indexPath indexAtPosition:1];
+        
+        CGAffineTransform xform = CGAffineTransformIdentity;
+
+        // if it's after the initial path, it needs to be moved up, to compensate for the fact that the cell is still there.
+        if (initialRow < currentRow) {
+            xform.ty -= self.paddingHeight;
+            currentRow--;
+        }
+
+        // then, if it's at-or-after the moving path, it needs to be moved down, because it should be beneath the floating cell.
+        if (movingRow <= currentRow) {
+            xform.ty += self.paddingHeight;
+        }
+        
+        cell.transform = xform;
+    }
 }
 
 
@@ -288,22 +320,22 @@
 				break;
 			}
 
-			[self setInitialIndexPathForMovingRow:touchedIndexPath];
-			[self setMovingIndexPath:touchedIndexPath];
-
-			
 			// Get the touched cell and reset it's selection state
-			UITableViewCell *touchedCell = [self cellForRowAtIndexPath:touchedIndexPath];
-			[touchedCell setSelected:NO];
-			[touchedCell setHighlighted:NO];
+			self.touchedCell = [self cellForRowAtIndexPath:touchedIndexPath];
+			[_touchedCell setSelected:NO];
+			[_touchedCell setHighlighted:NO];
+
+            [self setInitialIndexPathForMovingRow:touchedIndexPath];
+            self.paddingHeight = _touchedCell.bounds.size.height;
+			[self setMovingIndexPath:touchedIndexPath];
 			
 			// Compute the touch offset from the cell's center
-			CGPoint touchOffset = CGPointMake([touchedCell center].x - touchPoint.x, [touchedCell center].y - touchPoint.y);
+			CGPoint touchOffset = CGPointMake([_touchedCell center].x - touchPoint.x, [_touchedCell center].y - touchPoint.y);
 			[self setTouchOffset:touchOffset];
 			
 			
 			// Create a snap shot of the touched cell and store it
-			CGRect cellFrame = [touchedCell bounds];
+			CGRect cellFrame = [_touchedCell bounds];
 			
 			if ([[UIScreen mainScreen] scale] == 2.0) {
 				UIGraphicsBeginImageContextWithOptions(cellFrame.size, NO, 2.0);
@@ -311,7 +343,7 @@
 				UIGraphicsBeginImageContext(cellFrame.size);
 			}
 			
-			[[touchedCell layer] renderInContext:UIGraphicsGetCurrentContext()];
+			[[_touchedCell layer] renderInContext:UIGraphicsGetCurrentContext()];
 			UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
 			UIGraphicsEndImageContext();
 			
@@ -325,13 +357,16 @@
 			[self addSubview:[self snapShotImageView]];
 			
 			// Prepare the cell for moving (e.g. clear it's labels and imageView)
-            if ([touchedCell respondsToSelector:@selector(prepareForMove)]) {
-                [(id)touchedCell prepareForMove];
+            if ([_touchedCell respondsToSelector:@selector(prepareForMove)]) {
+                [(id)_touchedCell prepareForMove];
             } else {
-                [[touchedCell textLabel] setText:@""];
-                [[touchedCell detailTextLabel] setText:@""];
-                [[touchedCell imageView] setImage:nil];
+                [[_touchedCell textLabel] setText:@""];
+                [[_touchedCell detailTextLabel] setText:@""];
+                [[_touchedCell imageView] setImage:nil];
             }
+            
+            // hide the touched cell while the snapshot's moving around
+            _touchedCell.alpha = 0;
 			
 			// Inform the delegate about the beginning of the move
 			if ([[self delegate] respondsToSelector:@selector(moveTableView:willMoveRowAtIndexPath:)]) {
@@ -386,6 +421,8 @@
 									 // Clean up snap shot
 									 [[self snapShotImageView] removeFromSuperview];
 									 [self setSnapShotImageView:nil];
+                                     self.touchedCell.alpha = 1.0;
+                                     self.touchedCell = nil;
 									 
 									 // Inform the data source about the new position if necessary
 									 if ([[self initialIndexPathForMovingRow] compare:[self movingIndexPath]] != NSOrderedSame) {
@@ -413,6 +450,8 @@
 				
 				[[self snapShotImageView] removeFromSuperview];
 				[self setSnapShotImageView:nil];
+                self.touchedCell.alpha = 1.0;
+                self.touchedCell = nil;
 				
 				NSIndexPath *movingIndexPath = [self movingIndexPath];
 				[self setMovingIndexPath:nil];
