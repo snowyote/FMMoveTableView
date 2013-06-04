@@ -181,8 +181,21 @@
     }
 }
 
+- (BOOL)isIndexPath:(NSIndexPath*)a equalTo:(NSIndexPath*)b
+{
+    if (a == nil) {
+        return b == nil;
+    } else {
+        return [a compare:b] == NSOrderedSame;
+    }
+}
+
 - (void)setMovingIndexPath:(NSIndexPath *)newIndexPath
 {
+    if ([self isIndexPath:_movingIndexPath equalTo:newIndexPath]) {
+        return;
+    }
+
     if (newIndexPath == nil) {
         _movingIndexPath = nil;
         for (NSIndexPath* indexPath in [self indexPathsForVisibleRows]) {
@@ -192,9 +205,10 @@
         return;
     }
     
+    
     // I get a crash in the simulator if I don't do this.  super-odd?
     _movingIndexPath = [newIndexPath copy];
-    int initialRow = [_initialIndexPathForMovingRow indexAtPosition:1];
+    int initialRow = _initialIndexPathForMovingRow ? [_initialIndexPathForMovingRow indexAtPosition:1] : INT_MAX;
     int movingRow = [_movingIndexPath indexAtPosition:1];
     
     for (NSIndexPath* indexPath in [self indexPathsForVisibleRows]) {
@@ -213,7 +227,7 @@
         if (movingRow <= currentRow) {
             xform.ty += self.paddingHeight;
         }
-        
+
         cell.transform = xform;
     }
 }
