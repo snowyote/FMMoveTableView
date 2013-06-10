@@ -445,9 +445,11 @@
 									 
 									 // Reload row at moving index path to reset it's content
 									 NSIndexPath *movingIndexPath = [[self movingIndexPath] copy];
+									 [UIView setAnimationsEnabled:NO]; // fix ios6 animation bug
 									 [self setMovingIndexPath:nil];
 									 [self setInitialIndexPathForMovingRow:nil];
 									 [self reloadRowsAtIndexPaths:[NSArray arrayWithObject:movingIndexPath] withRowAnimation:UITableViewRowAnimationNone];
+									 [UIView setAnimationsEnabled:YES];
 								 }
 								 
 							 }];			
