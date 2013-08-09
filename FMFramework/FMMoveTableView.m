@@ -563,7 +563,16 @@
 	[self setAutoscrollTimer:nil];
 }
 
-
+- (void)addShadow:(UIView*)view
+{
+    // Create the shadow if a new snap shot is created
+    [[view layer] setShadowOpacity:0.7];
+    [[view layer] setShadowRadius:3];
+    [[view layer] setShadowOffset:CGSizeZero];
+    
+    CGPathRef shadowPath = [[UIBezierPath bezierPathWithRect:[[view layer] bounds]] CGPath];
+    [[view layer] setShadowPath:shadowPath];
+}
 
 #pragma mark -
 #pragma mark Accessor methods
@@ -572,13 +581,7 @@
 {
 	if (snapShotImageView)
 	{
-		// Create the shadow if a new snap shot is created
-		[[snapShotImageView layer] setShadowOpacity:0.7];
-		[[snapShotImageView layer] setShadowRadius:3];
-		[[snapShotImageView layer] setShadowOffset:CGSizeZero];
-		
-		CGPathRef shadowPath = [[UIBezierPath bezierPathWithRect:[[snapShotImageView layer] bounds]] CGPath];
-		[[snapShotImageView layer] setShadowPath:shadowPath];
+        [self addShadow:snapShotImageView];
 	}
 	
 	_snapShotImageView = snapShotImageView;

@@ -52,4 +52,7 @@
 - (BOOL)indexPathIsMovingIndexPath:(NSIndexPath *)indexPath;
 - (NSIndexPath *)adaptedIndexPathForRowAtIndexPath:(NSIndexPath *)indexPath;
 
+// Exposing for override
+- (void)addShadow:(UIView*)view;
+
 @end
